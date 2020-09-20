@@ -1,0 +1,394 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../favicon.ico">
+    <!-- Bootstrap core CSS -->
+    <link href="~/Css/bootstrap.min.css" rel="stylesheet">
+    <link href="~/Css/bootstrap-datetimepicker.min.css" rel="stylesheet" />
+    <link href="~/Css/layer.css" rel="stylesheet" />
+    <script src="~/Scripts/jquery-3.3.1.js"></script>
+    <script src="~/Scripts/bootstrap.min.js"></script>
+    <script src="~/Scripts/bootstrap-table.min.js"></script>
+    <script src="~/Scripts/bootstrap-datetimepicker.min.js"></script>
+    <script src="~/Scripts/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script src="~/Scripts/bootstrap-datetimepicker.fr.js"></script>
+    <script src="~/Scripts/layer/layer.js"></script>
+    <script>
+        $(function () {
+            //alert(00);
+            $('#btn_query').click(function () {
+                TableInit();
+            });
+
+            
+            //添加任务
+            $('#btn_add').click(function () {
+                $('#myModal').modal();
+                $('#btn_save').click(function () {
+                    //alert(000);
+                    saveData();
+                });
+                //TableInit();
+                //获取表单参数
+                //var data = {
+                //    'TaskName': $('#taskname').val(),
+                //    'TaskDesc': $('#taskdesc').val(),
+                //    'ActionPath': $('#actionpath').val(),
+                //    'TaskLoop': $('#taskloop').val(),
+                //    'StartTime': $('#starttime').val(),
+                //    'EndTime': $('#endtime').val()
+                //};
+                //saveData(data);
+             }); 
+
+            $('#starttime').datetimepicker({
+                language: 'zh-CN',
+            });
+            $('#endtime').datetimepicker({
+                language: 'zh-CN',
+            });
+
+            //任务有效
+            $('#btn_vaild').click(function () {
+                // 获取当前行
+                var row = $("#tb_task").bootstrapTable('getSelections');
+                if (row.length != 1) {
+                    layer.alert('请选择一条数据');
+                    return;
+                }
+                var taskName = row[0].TaskName;
+                var taskStats = row[0].TaskStats;
+                taskOpretion(taskName, taskStats);
+            });
+
+            //任务无效
+            $('#btn_invaild').click(function () {
+                // 获取当前行
+                var row = $("#tb_task").bootstrapTable('getSelections');
+                if (row.length != 1) {
+                    layer.alert('请选择一条数据');
+                    return;
+                }
+                var taskName = row[0].TaskName;
+                var taskStats = row[0].TaskStats;
+                taskOpretion(taskName, taskStats);
+            });
+
+            //任务执行
+            $('#btn_exec').click(function () {
+                // 获取当前行
+                var row = $("#tb_task").bootstrapTable('getSelections');
+                if (row.length != 1) {
+                    layer.alert('请选择一条数据');
+                    return;
+                }
+                var taskName = row[0].TaskName;
+                var taskStats = row[0].TaskStats;
+                if (taskStats == "无效") {
+                    layer.alert('任务被禁用，请先启用');
+                    return;
+                }
+                taskStats = '执行';
+                taskOpretion(taskName, taskStats);
+            });
+
+            //删除任务
+            $('#btn_delete').click(function () {
+                // 获取当前行
+                var row = $("#tb_task").bootstrapTable('getSelections');
+                if (row.length != 1) {
+                    layer.alert('请选择一条数据');
+                    return;
+                }
+                var taskName = row[0].TaskName;
+                var taskStats = "删除";
+                taskOpretion(taskName, taskStats)
+            });
+        });
+
+
+        function saveData() {
+            var data = {
+                'TaskName': $('#cname').val(),
+                'TaskDesc': $('#taskdesc').val(),
+                'ActionPath': $('#actionpath').val(),
+                'TaskLoop': $('#Unit').val() + "-"+$('#Num').val(),
+                'StartTime': $('#starttime').val(),
+                'EndTime': $('#endtime').val()
+            };
+            //console.log(data);
+            //发送请求
+            $.ajax({
+                type: "post",
+                url: '/Home/Createtask',
+                data: data,
+                datatype: "json",
+                success: function (data) {
+                    console.log(data);
+                    var result = data.rows;
+                    if (result.indexOf("True") != -1) {
+                        layer.alert("操作成功！");
+                    } else {
+                        layer.alert("操作失败！");
+                    }
+                }
+            });
+            $('#myModal').on('hide.bs.modal', function () {
+                $('#formAdd').val();
+                TableInit();
+            });
+        }
+        //操作任务
+        function taskOpretion(taskName, taskStats) {
+            $.ajax({
+                type: "POST",
+                url: '/Home/OpreateTask',
+                data: { 'TaskName': taskName, "flag": taskStats },
+                dataType: "json",
+                success: function (data) {
+                    console.log(data);
+                    var result = data.rows;
+                    if (result.indexOf("True") != -1) {
+                        layer.alert("操作成功！");
+                    } else {
+                        layer.alert("操作失败！");
+                    }
+                }
+            });
+            TableInit();
+        }
+        //表格初始化
+        var TableInit = function () {
+            var tname = $('#taskname').val();
+            $('#tb_task').bootstrapTable('destroy');
+            $('#tb_task').bootstrapTable({
+                url: '/Home/GetTaskList',         //请求后台的URL（*）
+                method: 'post',                      //请求方式（*）
+                toolbar: '#toolbar',                //工具按钮用哪个容器
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                //pagination: true,                   //是否显示分页（*）
+                //sortable: false,                     //是否启用排序
+                //sortOrder: "asc",                   //排序方式
+                queryParams: function (param) {
+                    return {
+                        TaskName: tname
+                    };
+                },//传递参数（*）
+                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
+                // pageNumber: 1,                       //初始化加载第一页，默认第一页
+                // pageSize: 10,                       //每页的记录行数（*）
+                //pageList: [10, 25, 50, 100],        //可供选择的每页的行数（*）
+                // search: true,                       //是否显示表格搜索，此搜索是客户端搜索，不会进服务端，所以，个人感觉意义不大
+                // strictSearch: true,
+                // showColumns: true,                  //是否显示所有的列
+                showRefresh: true,                  //是否显示刷新按钮
+                // minimumCountColumns: 2,             //最少允许的列数
+                //clickToSelect: true,                //是否启用点击选中行
+                // height: 500,                        //行高，如果没有设置height属性，表格自动根据记录条数觉得表格高度
+                // uniqueId: "ID",                     //每一行的唯一标识，一般为主键列
+                // showToggle: true,                    //是否显示详细视图和列表视图的切换按钮
+                //cardView: false,                    //是否显示详细视图
+                //detailView: false,                   //是否显示父子表
+                columns: [
+                    {
+                        radio: true
+                    },
+                    {
+                        field: 'TaskName',
+                        title: '任务名'
+                    },
+                    {
+                        field: 'Description',
+                        title: '说明'
+                    },
+                    {
+                        field: 'ActionPath',
+                        title: '任务路径'
+                    },
+                    {
+                        field: 'TaskStartTime',
+                        title: '开始时间'
+                    },
+                    {
+                        field: 'TaskEndTime',
+                        title: '结束时间'
+                    },
+                    {
+                        field: 'TaskStats',
+                        title: '状态'
+                    },
+                    {
+                        field: 'NextRunTime',
+                        title: '下次运行时间'
+                    }
+                ]
+            });
+        };
+
+        //频率的二级联动
+        function init_area() {
+            var unit = $("#Unit");
+            var unit_value = unit.val();
+            var num = $("#Num");
+            //移除area除第一个选项以外的其他选项
+            num.find("option:not(:first)").remove();
+            if (unit_value == 'MINUTE') {
+                var area_value = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59'];
+            } else if (unit_value == 'HOURLY') {
+                var area_value = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
+            } else if (unit_value == 'DAILY') {
+                var area_value = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'];
+            } else if (unit_value == 'WEEKLY') {
+                var area_value = [ '1', '2', '3', '4', '5', '6', '7'];;
+            } else if (unit_value == 'MONTHLY') {
+                var area_value = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+            }
+            if (area_value != '') {
+                //alert(area_value);
+                for (var i = 0; i < area_value.length; i++) {
+                    num.append(new Option(area_value[i], area_value[i]));
+                }
+            }
+            //num.selectpicker('refresh');
+        }
+    </script>
+</head>
+<body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Schedule Management</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="panel-body" style="padding-bottom:0px;">
+        <div class="panel panel-default">
+            <div class="panel-heading">查询条件</div>
+            <div class="panel-body">
+                <form id="formSearch" class="form-horizontal">
+                    <div class="form-group" style="margin-top:15px">
+                        <label class="control-label col-sm-1" for="taskname">任务名称</label>
+                        <div class="col-sm-3">
+                            <input type="text" class="form-control" id="taskname" value="Task">
+                        </div>
+                        <div class="col-sm-4" style="text-align:left;">
+                            <button type="button" style="margin-left:50px" id="btn_query" class="btn btn-primary">查询</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="toolbar" class="btn-group" style="margin-bottom:15px">
+            <button id="btn_exec" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>运行
+            </button>
+            <button id="btn_add" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>新增
+            </button>
+            <button id="btn_edit" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>修改
+            </button>
+            <button id="btn_delete" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>删除
+            </button>
+            <button id="btn_vaild" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>有效
+            </button>
+            <button id="btn_invaild" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>无效
+            </button>
+        </div>
+        <table id="tb_task"></table>
+    </div>
+
+    <!-- 模态框（Modal） -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                        &times;
+                    </button>
+                    <h4 class="modal-title" id="myModalLabel">
+                        创建新任务
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <form id="formAdd" class="form-horizontal" role="form">
+                        <div class="form-group" style="margin-top:15px">
+                            <label class="control-label col-sm-2" for="taskname">任务名称</label>
+                            <div class="col-sm-10" style="padding-bottom:15px">
+                                <input type="text" class="form-control" id="cname">
+                            </div>
+                            <label class="control-label col-sm-2" for="taskdesc">任务说明</label>
+                            <div class="col-sm-10" style="padding-bottom:15px">
+                                <input type="text" class="form-control" id="taskdesc">
+                            </div>
+                            <label class="control-label col-sm-2" for="actionpath">任务路径</label>
+                            <div class="col-sm-10" style="padding-bottom:15px">
+                                <input type="text" class="form-control" id="actionpath">
+                            </div>
+                            
+                            <label class="control-label col-sm-2" for="taskloop">任务频率</label>
+                            <div class="col-sm-10" style="padding-bottom:15px">
+                                <div class="col-sm-6">
+                                    <select name="Unit" class="form-control selectpicker bootstrap-select--2 " data-size="false" id="Unit" onchange="init_area();">
+                                        <option selected="selected" class="display-none" value="">选择间隔单位</option>
+                                        <option value="MINUTE">/分钟</option>
+                                        <option value="HOURLY">/小时</option>
+                                        <option value="DAILY">/天</option>
+                                        <option value="WEEKLY">/周</option>
+                                        <option value="MONTHLY">/月</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6">
+                                    <select name="Num" class="form-control selectpicker bootstrap-select--2 col-sm-5" id="Num">
+                                    </select>
+                                </div>
+                            </div>
+                                <label class="control-label col-sm-2" for="starttime">开始时间</label>
+                                <div class='input-group date col-sm-10'  style="padding-bottom:15px">
+                                    <input type='text' class="form-control"id='starttime' />
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                            </div>
+
+                                <label class="control-label col-sm-2" for="endtime">结束时间</label>
+                                <div class='input-group date col-sm-10'  style="padding-bottom:15px">
+                                    <input type='text' class="form-control" id='endtime'/>
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                            </div>
+                         </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">
+                        关闭
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn_save" >
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+</body>
+</html>
